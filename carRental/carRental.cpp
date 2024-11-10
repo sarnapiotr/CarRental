@@ -30,7 +30,7 @@ void adminMenu() {
 		showAdminMenu();
 		cin >> adminChoice;
 
-		if (cin.fail() || adminChoice < 1 || adminChoice > 2) {
+		if (cin.fail() || adminChoice < 1 || adminChoice > 2) {//Kontrola błędu przy niepoprawym wyborze
 			cin.clear();
 			cin.ignore(numeric_limits<streamsize>::max(), '\n');
 			cout << "Nieprawidlowy wybor, sprobuj ponownie.\n";
@@ -39,15 +39,15 @@ void adminMenu() {
 		}
 
 		switch (adminChoice) {
-		case 1:
-			cout << "Wykonano operacje administracyjna\n";
-			system("pause");
-			break;
-		case 2:
-			cout << "Wylogowano z konta admina\n";
-			system("pause");
-			return;
-		}
+			case 1:
+				cout << "Wykonano operacje administracyjna\n";
+				system("pause");
+				break;
+			case 2:
+				cout << "Wylogowano\n";
+				system("pause");
+				return;
+			}
 	}
 }
 
@@ -63,7 +63,7 @@ void logowanie() {
 		cout << "Podaj haslo: ";
 		cin >> haslo;
 
-		if (login == "admin" && haslo == "1234") {
+		if (login == "admin" && haslo == "admin") {
 			loggedIn = true;
 			adminMenu();
 		}
@@ -76,7 +76,7 @@ void logowanie() {
 			cout << "Wybierz opcje: ";
 			cin >> choice;
 
-			if (cin.fail() || (choice != 1 && choice != 2)) {
+			if (cin.fail() || (choice != 1 && choice != 2)) {//Kontrola błędu przy niepoprawym wyborze
 				cin.clear();
 				cin.ignore(numeric_limits<streamsize>::max(), '\n');
 				cout << "Nieprawidlowy wybor, sprobuj ponownie\n";
@@ -84,7 +84,9 @@ void logowanie() {
 				continue;
 			}
 
-			if (choice == 2) return;
+			if (choice == 2) {
+				return;
+			};
 		}
 	}
 }
@@ -107,7 +109,7 @@ void rejestracja() {
 		cout << "Wybierz opcje: ";
 		cin >> wybor;
 
-		if (cin.fail() || wybor != 1) {
+		if (cin.fail() || wybor != 1) {//Kontrola błędu przy niepoprawym wyborze
 			cin.clear();
 			cin.ignore(numeric_limits<streamsize>::max(), '\n');
 			clearScreen();
@@ -125,7 +127,7 @@ int main() {
 		showMainMenu();
 		cin >> mainMenuChoice;
 
-		if (cin.fail() || mainMenuChoice < 1 || mainMenuChoice > 3) {
+		if (cin.fail() || mainMenuChoice < 1 || mainMenuChoice > 3) {//Kontrola błędu przy niepoprawym wyborze
 			cin.clear();
 			cin.ignore(numeric_limits<streamsize>::max(), '\n');
 			cout << "Nieprawidlowy wybor, sprobuj ponownie\n";
@@ -134,15 +136,15 @@ int main() {
 		}
 
 		switch (mainMenuChoice) {
-		case 1:
-			logowanie();
-			break;
-		case 2:
-			rejestracja();
-			break;
-		case 3:
-			cout << "Wyjscie\n";
-			return 0;
-		}
+			case 1:
+				logowanie();
+				break;
+			case 2:
+				rejestracja();
+				break;
+			case 3:
+				cout << "Wyjscie\n";
+				return 0;
+			}
 	}
 }
