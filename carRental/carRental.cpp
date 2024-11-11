@@ -287,9 +287,8 @@ void adminMenu() {
 
 void logowanie() {
 	string login, haslo;
-	bool loggedIn = false;
 
-	while (!loggedIn) {
+	while (true) {
 		clearScreen();
 		cout << "=== Logowanie ===\n";
 		cout << "Podaj login: ";
@@ -298,7 +297,6 @@ void logowanie() {
 		cin >> haslo;
 
 		if (login == "admin" && haslo == "admin") {
-			loggedIn = true;
 			adminMenu();
 			return;
 		}
