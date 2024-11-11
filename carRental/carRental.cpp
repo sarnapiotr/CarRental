@@ -29,7 +29,7 @@ void showAdminMenu() {
 	cout << "Wybierz opcje: ";
 }
 
-void showCarManagmentMenu() {
+void showCarManagementMenu() {
 	clearScreen();
 	cout << "=== Zarzadzanie samochodami ===\n";
 	cout << "1. Dodaj\n";
@@ -60,18 +60,18 @@ public:
 	}
 };
 
-class CarManagmentClass {
+class CarManagementClass {
 private:
 	vector<Car> cars;
 
 public:
-	void carManagment() {
+	void carManagement() {
 		int choice = 0;
 
-		showCarManagmentMenu();
+		showCarManagementMenu();
 		cin >> choice;
 
-		if (cin.fail() || choice < 1 || choice > 4) {//Kontrola błędu przy niepoprawym wyborze
+		if (cin.fail() || choice < 1 || choice > 4) {
 			cin.clear();
 			cin.ignore(numeric_limits<streamsize>::max(), '\n');
 			cout << "Nieprawidlowy wybor, sprobuj ponownie\n";
@@ -81,20 +81,20 @@ public:
 
 		switch (choice) {
 		case 1:
-			this->carManagmentAdd();
+			this->carManagementAdd();
 			break;
 		case 2:
-			this->carManagmentDelete();
+			this->carManagementDelete();
 			break;
 		case 3:
-			this->carManagmentEdit();
+			this->carManagementEdit();
 			break;
 		case 4:
 			return;
 		}
 	}
 
-	void carManagmentAdd() {
+	void carManagementAdd() {
 		clearScreen();
 		string brand, model, year;
 		cout << "=== Dodaj samochod ===\n";
@@ -113,7 +113,7 @@ public:
 		while (true) {
 			cin >> choice;
 
-			if (cin.fail() || choice < 1 || choice > 2) {//Kontrola błędu przy niepoprawym wyborze
+			if (cin.fail() || choice < 1 || choice > 2) {
 				cin.clear();
 				cin.ignore(numeric_limits<streamsize>::max(), '\n');
 				cout << "Nieprawidlowy wybor, sprobuj ponownie\n";
@@ -133,7 +133,7 @@ public:
 		system("pause");
 	}
 
-	void carManagmentDelete() {
+	void carManagementDelete() {
 		clearScreen();
 		cout << "=== Usun samochod ===\n";
 
@@ -152,7 +152,7 @@ public:
 		while (true) {
 			cin >> id;
 
-			if (cin.fail() || id < 0 || id >= cars.size()) {//Kontrola błędu przy niepoprawym wyborze
+			if (cin.fail() || id < 0 || id >= cars.size()) {
 				cin.clear();
 				cin.ignore(numeric_limits<streamsize>::max(), '\n');
 				cout << "Nieprawidlowy ID, sprobuj ponownie\n";
@@ -178,7 +178,7 @@ public:
 		}
 	}
 
-	void carManagmentEdit() {
+	void carManagementEdit() {
 		clearScreen();
 		cout << "=== Edytuj samochod ===\n";
 
@@ -197,7 +197,7 @@ public:
 		while (true) {
 			cin >> id;
 
-			if (cin.fail() || id < 0 || id >= cars.size()) {//Kontrola błędu przy niepoprawym wyborze
+			if (cin.fail() || id < 0 || id >= cars.size()) {
 				cin.clear();
 				cin.ignore(numeric_limits<streamsize>::max(), '\n');
 				cout << "Nieprawidlowy ID, sprobuj ponownie\n";
@@ -213,7 +213,7 @@ public:
 			cout << "4. Anuluj\n";
 			cin >> editChoice;
 
-			if (cin.fail() || editChoice < 1 || editChoice > 4) {//Kontrola błędu przy niepoprawym wyborze
+			if (cin.fail() || editChoice < 1 || editChoice > 4) {
 				cin.clear();
 				cin.ignore(numeric_limits<streamsize>::max(), '\n');
 				cout << "Nieprawidlowy wybor, sprobuj ponownie.\n";
@@ -252,12 +252,12 @@ public:
 
 void adminMenu() {
 	int adminChoice = 0;
-	CarManagmentClass carManagmentObject;
+	CarManagementClass carManagementObject;
 	while (true) {
 		showAdminMenu();
 		cin >> adminChoice;
 
-		if (cin.fail() || adminChoice < 1 || adminChoice > 4) {//Kontrola błędu przy niepoprawym wyborze
+		if (cin.fail() || adminChoice < 1 || adminChoice > 4) {
 			cin.clear();
 			cin.ignore(numeric_limits<streamsize>::max(), '\n');
 			cout << "Nieprawidlowy wybor, sprobuj ponownie\n";
@@ -275,7 +275,7 @@ void adminMenu() {
 			system("pause");
 			break;
 		case 3:
-			carManagmentObject.carManagment();
+			carManagementObject.carManagement();
 			break;
 		case 4:
 			cout << "Wylogowano z konta admina\n";
