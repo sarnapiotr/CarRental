@@ -2,17 +2,20 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <sstream>
 
 using namespace std;
 
 void adminMenu();
 ofstream Report("raport.txt");
 
-void clearScreen() {
+void clearScreen()
+{
 	system("cls");
 }
 
-void showMainMenu() {
+void showMainMenu()
+{
 	clearScreen();
 	cout << "=== Wynajem samochodow ===\n";
 	cout << "1. Logowanie\n";
@@ -21,7 +24,8 @@ void showMainMenu() {
 	cout << "Wybierz opcje: ";
 }
 
-void showAdminMenu() {
+void showAdminMenu()
+{
 	clearScreen();
 	cout << "=== Menu Admina ===\n";
 	cout << "1. Zarzadzanie uzytkownikami\n";
@@ -31,7 +35,8 @@ void showAdminMenu() {
 	cout << "Wybierz opcje: ";
 }
 
-void showCarManagementMenu() {
+void showCarManagementMenu()
+{
 	clearScreen();
 	cout << "=== Zarzadzanie samochodami ===\n";
 	cout << "1. Dodaj\n";
@@ -41,51 +46,84 @@ void showCarManagementMenu() {
 	cout << "Wybierz opcje: ";
 }
 
-void addToReport(string text) {
+void addToReport(string text)
+{
 	Report << text << "\n";
 }
 
-void addUserActionToReport(string user, string action, string description = "") {
+void addUserActionToReport(string user, string action, string description = "")
+{
 	Report << user << " " << action << " " << description << "\n";
 }
 
-void getReport() {
+void getReport()
+{
 	Report.close();
 }
 
-class Car {
+class Car
+{
 public:
 	string brand;
 	string model;
 	string year;
+	bool status;
 
-	Car(string brand, string model, string year) : brand(brand), model(model), year(year) {}
+	Car(string brand, string model, string year, bool status)
+		: brand(brand), model(model), year(year), status(status) {}
 
-	string getBrand() {
-		return this->brand;
+	string toString() const
+	{
+		return brand + " " + model + " " + year + " " + (status ? "1" : "0");
 	}
 
-	string getModel() {
-		return this->model;
-	}
-
-	string getYear() {
-		return this->year;
+	static Car fromString(const string &str)
+	{
+		string brand, model, year;
+		bool status;
+		istringstream iss(str);
+		iss >> brand >> model >> year >> status;
+		return Car(brand, model, year, status);
 	}
 };
 
-class CarManagementClass {
+class CarManagementClass
+{
 private:
-	vector<Car> cars;
+	const string carDatabaseFile = "cars.txt";
+
+	vector<Car> readCarsFromFile()
+	{
+		vector<Car> cars;
+		ifstream file(carDatabaseFile);
+		string line;
+		while (getline(file, line))
+		{
+			cars.push_back(Car::fromString(line));
+		}
+		file.close();
+		return cars;
+	}
+
+	void writeCarsToFile(const vector<Car> &cars)
+	{
+		ofstream file(carDatabaseFile);
+		for (const Car &car : cars)
+		{
+			file << car.toString() << endl;
+		}
+		file.close();
+	}
 
 public:
-	void carManagement() {
+	void carManagement()
+	{
 		int choice = 0;
-
 		showCarManagementMenu();
 		cin >> choice;
 
-		if (cin.fail() || choice < 1 || choice > 4) {
+		if (cin.fail() || choice < 1 || choice > 4)
+		{
 			cin.clear();
 			cin.ignore(numeric_limits<streamsize>::max(), '\n');
 			cout << "Nieprawidlowy wybor, sprobuj ponownie\n";
@@ -94,7 +132,8 @@ public:
 			return;
 		}
 
-		switch (choice) {
+		switch (choice)
+		{
 		case 1:
 			this->carManagementAdd();
 			break;
@@ -109,7 +148,8 @@ public:
 		}
 	}
 
-	void carManagementAdd() {
+	void carManagementAdd()
+	{
 		clearScreen();
 		string brand, model, year;
 		addToReport("-> Dodawanie samochodu");
@@ -126,10 +166,12 @@ public:
 		cout << "1. Dodaj\n";
 		cout << "2. Anuluj\n";
 
-		while (true) {
+		while (true)
+		{
 			cin >> choice;
 
-			if (cin.fail() || choice < 1 || choice > 2) {
+			if (cin.fail() || choice < 1 || choice > 2)
+			{
 				cin.clear();
 				cin.ignore(numeric_limits<streamsize>::max(), '\n');
 				cout << "Nieprawidlowy wybor, sprobuj ponownie\n";
@@ -138,12 +180,16 @@ public:
 				continue;
 			}
 
-			if (choice == 1) {
-				cars.push_back(Car(brand, model, year));
-				addToReport("Dodawanie samochodu: " + brand + " " + model+ " " + year);
+			if (choice == 1)
+			{
+				vector<Car> cars = readCarsFromFile();
+				cars.push_back(Car(brand, model, year, false));
+				writeCarsToFile(cars);
+				addToReport("Dodawanie samochodu: " + brand + " " + model + " " + year);
 				cout << "Samochod zostal dodany\n";
 			}
-			else {
+			else
+			{
 				addToReport("Dodawanie samochodu anulowane");
 				cout << "Dodawanie anulowane\n";
 			}
@@ -152,28 +198,34 @@ public:
 		system("pause");
 	}
 
-	void carManagementDelete() {
+	void carManagementDelete()
+	{
 		clearScreen();
 		addToReport("-> Usuwanie samochodu");
 		cout << "=== Usun samochod ===\n";
 
-		if (cars.empty()) {
+		vector<Car> cars = readCarsFromFile();
+		if (cars.empty())
+		{
 			cout << "Brak samochodow do usuniecia\n";
 			addToReport("Brak samochodów do usunięcia");
 			system("pause");
 			return;
 		}
 
-		for (size_t i = 0; i < cars.size(); ++i) {
+		for (size_t i = 0; i < cars.size(); ++i)
+		{
 			cout << i << ". Marka: " << cars[i].brand << ", Model: " << cars[i].model << ", Rok: " << cars[i].year << "\n";
 		}
 
 		int id;
 		cout << "Podaj ID samochodu do usuniecia: ";
-		while (true) {
+		while (true)
+		{
 			cin >> id;
 
-			if (cin.fail() || id < 0 || id >= cars.size()) {
+			if (cin.fail() || id < 0 || id >= cars.size())
+			{
 				cin.clear();
 				cin.ignore(numeric_limits<streamsize>::max(), '\n');
 				cout << "Nieprawidlowy ID, sprobuj ponownie\n";
@@ -188,42 +240,63 @@ public:
 			int confirmChoice;
 			cin >> confirmChoice;
 
-			if (confirmChoice == 1) {
-				cars.erase(cars.begin() + id);
-				cout << "Samochod zostal usuniety\n";
+			if (confirmChoice == 1)
+			{
 				addToReport("Usunięcie samochodu: " + cars[id].brand + " " + cars[id].model + " " + cars[id].year);
+				cars.erase(cars.begin() + id);
+				writeCarsToFile(cars);
+				cout << "Samochod zostal usuniety\n";
 			}
-			else {
-				cout << "Usuwanie anulowane\n";
+			else
+			{
 				addToReport("Usuwanie samochodu anulowane");
+				cout << "Usuwanie anulowane\n";
 			}
 			system("pause");
 			break;
 		}
 	}
 
-	void carManagementEdit() {
+	void carManagementEdit()
+	{
 		clearScreen();
 		addToReport("-> Edytowanie samochodu");
 		cout << "=== Edytuj samochod ===\n";
 
-		if (cars.empty()) {
+		vector<Car> cars;
+		ifstream inputFile(carDatabaseFile);
+		string line;
+		while (getline(inputFile, line))
+		{
+			stringstream ss(line);
+			string brand, model, year;
+			bool status;
+			ss >> brand >> model >> year >> status;
+			cars.emplace_back(brand, model, year, status);
+		}
+		inputFile.close();
+
+		if (cars.empty())
+		{
 			cout << "Brak samochodow do edytowania\n";
 			addToReport("Brak samochodów do edytowania");
 			system("pause");
 			return;
 		}
 
-		for (size_t i = 0; i < cars.size(); ++i) {
+		for (size_t i = 0; i < cars.size(); ++i)
+		{
 			cout << i << ". Marka: " << cars[i].brand << ", Model: " << cars[i].model << ", Rok: " << cars[i].year << "\n";
 		}
 
 		int id;
 		cout << "Podaj ID samochodu do edytowania: ";
-		while (true) {
+		while (true)
+		{
 			cin >> id;
 
-			if (cin.fail() || id < 0 || id >= cars.size()) {
+			if (cin.fail() || id < 0 || id >= cars.size())
+			{
 				cin.clear();
 				cin.ignore(numeric_limits<streamsize>::max(), '\n');
 				cout << "Nieprawidlowy ID, sprobuj ponownie\n";
@@ -240,7 +313,8 @@ public:
 			cout << "4. Anuluj\n";
 			cin >> editChoice;
 
-			if (cin.fail() || editChoice < 1 || editChoice > 4) {
+			if (cin.fail() || editChoice < 1 || editChoice > 4)
+			{
 				cin.clear();
 				cin.ignore(numeric_limits<streamsize>::max(), '\n');
 				cout << "Nieprawidlowy wybor, sprobuj ponownie.\n";
@@ -249,50 +323,67 @@ public:
 				continue;
 			}
 
-			switch (editChoice) {
-			case 1: {
+			switch (editChoice)
+			{
+			case 1:
+			{
 				cout << "Podaj nowa marke: ";
 				string temp = cars[id].brand;
 				cin >> cars[id].brand;
 				cout << "Marka samochodu zostala zaktualizowana\n";
-				addToReport("Marka samochodu zostala zaktualizowana z: " + temp + " na: "+ cars[id].brand);
+				addToReport("Marka samochodu zostala zaktualizowana z: " + temp + " na: " + cars[id].brand);
 				break;
 			}
-			case 2: {
+			case 2:
+			{
 				cout << "Podaj nowy model: ";
 				string temp = cars[id].model;
 				cin >> cars[id].model;
 				cout << "Model samochodu zostal zaktualizowany\n";
-				addToReport("Model samochodu zostala zaktualizowana z: " + temp + " na: " + cars[id].brand);
+				addToReport("Model samochodu zostala zaktualizowana z: " + temp + " na: " + cars[id].model);
 				break;
 			}
-			case 3: {
+			case 3:
+			{
 				cout << "Podaj nowy rok: ";
 				string temp = cars[id].year;
 				cin >> cars[id].year;
 				cout << "Rok samochodu zostal zaktualizowany\n";
-				addToReport("Rok samochodu zostala zaktualizowana z: " + temp + " na: " + cars[id].brand);
+				addToReport("Rok samochodu zostala zaktualizowana z: " + temp + " na: " + cars[id].year);
 				break;
 			}
 			case 4:
 				cout << "Edycja anulowana\n";
 				addToReport("Edycja samochodu anulowana");
-				break;
+				system("pause");
+				return;
 			}
+
+			ofstream outputFile(carDatabaseFile, ios::trunc);
+			for (const auto &car : cars)
+			{
+				outputFile << car.brand << " " << car.model << " " << car.year << " " << car.status << "\n";
+			}
+			outputFile.close();
+
+			cout << "Samochod zostal pomyslnie zaktualizowany w bazie danych\n";
 			system("pause");
 			break;
 		}
 	}
 };
 
-void adminMenu() {
+void adminMenu()
+{
 	int adminChoice = 0;
 	CarManagementClass carManagementObject;
-	while (true) {
+	while (true)
+	{
 		showAdminMenu();
 		cin >> adminChoice;
 
-		if (cin.fail() || adminChoice < 1 || adminChoice > 4) {
+		if (cin.fail() || adminChoice < 1 || adminChoice > 4)
+		{
 			cin.clear();
 			cin.ignore(numeric_limits<streamsize>::max(), '\n');
 			cout << "Nieprawidlowy wybor, sprobuj ponownie\n";
@@ -301,7 +392,8 @@ void adminMenu() {
 			continue;
 		}
 
-		switch (adminChoice) {
+		switch (adminChoice)
+		{
 		case 1:
 			cout << "Zarzadzanie uzytkownikami\n";
 			addToReport("-> Zarzadzanie uzytkownikami");
@@ -323,10 +415,12 @@ void adminMenu() {
 	}
 }
 
-void logowanie() {
+void logowanie()
+{
 	string login, haslo;
 
-	while (true) {
+	while (true)
+	{
 		clearScreen();
 		addToReport("-> Logowanie");
 		cout << "=== Logowanie ===\n";
@@ -335,12 +429,14 @@ void logowanie() {
 		cout << "Podaj haslo: ";
 		cin >> haslo;
 
-		if (login == "admin" && haslo == "admin") {
+		if (login == "admin" && haslo == "admin")
+		{
 			addUserActionToReport(login, "Zalogował się");
 			adminMenu();
 			return;
 		}
-		else {
+		else
+		{
 			int choice;
 			clearScreen();
 			addToReport("ERROR: Błędny login lub hasło");
@@ -350,7 +446,8 @@ void logowanie() {
 			cout << "Wybierz opcje: ";
 			cin >> choice;
 
-			if (cin.fail() || (choice != 1 && choice != 2)) {//Kontrola błędu przy niepoprawym wyborze
+			if (cin.fail() || (choice != 1 && choice != 2))
+			{ // Kontrola błędu przy niepoprawym wyborze
 				cin.clear();
 				cin.ignore(numeric_limits<streamsize>::max(), '\n');
 				cout << "Nieprawidlowy wybor, sprobuj ponownie\n";
@@ -359,12 +456,14 @@ void logowanie() {
 				continue;
 			}
 
-			if (choice == 2) return;
+			if (choice == 2)
+				return;
 		}
 	}
 }
 
-void rejestracja() {
+void rejestracja()
+{
 	clearScreen();
 	string nowyLogin, noweHaslo;
 	addToReport("-> Rejestracja");
@@ -377,32 +476,38 @@ void rejestracja() {
 	cout << "Utworzono nowego uzytkownika pomyslnie\n";
 	int wybor;
 
-	while (true) {
+	while (true)
+	{
 		cout << "1. Powrot do menu glownego\n";
 		cout << "Wybierz opcje: ";
 		cin >> wybor;
 
-		if (cin.fail() || wybor != 1) {//Kontrola błędu przy niepoprawym wyborze
+		if (cin.fail() || wybor != 1)
+		{ // Kontrola błędu przy niepoprawym wyborze
 			cin.clear();
 			cin.ignore(numeric_limits<streamsize>::max(), '\n');
 			clearScreen();
 			cout << "Nieprawidlowy wybor, sprobuj ponownie\n";
 			addToReport("ERROR: Błąd wyboru");
 		}
-		else {
+		else
+		{
 			break;
 		}
 	}
 }
 
-int main() {
-	
+int main()
+{
+
 	int mainMenuChoice = 0;
-	while (true) {
+	while (true)
+	{
 		showMainMenu();
 		cin >> mainMenuChoice;
 
-		if (cin.fail() || mainMenuChoice < 1 || mainMenuChoice > 3) {//Kontrola błędu przy niepoprawym wyborze
+		if (cin.fail() || mainMenuChoice < 1 || mainMenuChoice > 3)
+		{ // Kontrola błędu przy niepoprawym wyborze
 			cin.clear();
 			cin.ignore(numeric_limits<streamsize>::max(), '\n');
 			cout << "Nieprawidlowy wybor, sprobuj ponownie\n";
@@ -411,7 +516,8 @@ int main() {
 			continue;
 		}
 
-		switch (mainMenuChoice) {
+		switch (mainMenuChoice)
+		{
 		case 1:
 			logowanie();
 			break;
