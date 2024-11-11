@@ -1,0 +1,8 @@
+-> Logowanie
+admin Zalogował się 
+-> Dodawanie samochodu
+Dodawanie samochodu: bwm 22 1231
+-> Edytowanie samochodu
+Edycja samochodu anulowana
+-> Edytowanie samochodu
+Marka samochodu zostala zaktualizowana z: bwm na: mrereced
