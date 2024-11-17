@@ -127,9 +127,20 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="C:\Users\P\Downloads\sqlite-amalgamation-3470000\sqlite-amalgamation-3470000\sqlite3.c" />
     <ClCompile Include="carRental.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="..\packages\sqlite3_c_plus_plus.1.0.3\build\native\sqlite3_c_plus_plus.targets" Condition="Exists('..\packages\sqlite3_c_plus_plus.1.0.3\build\native\sqlite3_c_plus_plus.targets')" />
   </ImportGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>Ten projekt zawiera odwołania do pakietów NuGet, których nie ma na tym komputerze. Użyj przywracania pakietów NuGet, aby je pobrać. Aby uzyskać więcej informacji, zobacz http://go.microsoft.com/fwlink/?LinkID=322105. Brakujący plik: {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\sqlite3_c_plus_plus.1.0.3\build\native\sqlite3_c_plus_plus.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\sqlite3_c_plus_plus.1.0.3\build\native\sqlite3_c_plus_plus.targets'))" />
+  </Target>
 </Project>
