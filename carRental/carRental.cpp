@@ -9,67 +9,85 @@
 using namespace std;
 
 ofstream Report("raport.txt");
-struct User {
-	string username;
-	string password;
-	string accountType;
-	string borrowedCar;
-};
+sqlite3* db;
 
-vector<User> users;
-
-void loadUsers() {
-	ifstream userFile("users.txt");
-	string line;
-	while (getline(userFile, line)) {
-		stringstream ss(line);
-		User user;
-		getline(ss, user.username, ',');
-		getline(ss, user.password, ',');
-		getline(ss, user.accountType, ',');
-		getline(ss, user.borrowedCar, ',');
-		users.push_back(user);
+void initializeDatabase(sqlite3*& db) {
+	int result = sqlite3_open("carrental.db", &db);
+	if (result != SQLITE_OK) {
+		cerr << "Error opening database: " << sqlite3_errmsg(db) << std::endl;
+		exit(1);
 	}
-	userFile.close();
+
+	const char* createTableQuery = R"(
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            password TEXT NOT NULL,
+            accountType TEXT NOT NULL,
+            borrowedCar TEXT
+        );
+    )";
+
+	char* errorMessage;
+	result = sqlite3_exec(db, createTableQuery, 0, 0, &errorMessage);
+	if (result != SQLITE_OK) {
+		std::cerr << "Error creating table: " << errorMessage << std::endl;
+		sqlite3_free(errorMessage);
+	}
+	else {
+		std::cout << "Table `users` initialized successfully." << std::endl;
+	}
 }
 
-void saveUsers() {
-	ofstream userFile("users.txt", ios::trunc);
-	for (const auto& user : users) {
-		userFile << user.username << "," << user.password << "," << user.accountType << "," << user.borrowedCar << "\n";
+void addUser(sqlite3* db, const string& username, const string& password, const string& accountType, const string& borrowedCar = "") {
+	const char* insertQuery = R"(
+        INSERT INTO users (username, password, accountType, borrowedCar)
+        VALUES (?, ?, ?, ?);
+    )";
+
+	sqlite3_stmt* stmt;
+	if (sqlite3_prepare_v2(db, insertQuery, -1, &stmt, 0) != SQLITE_OK) {
+		cerr << "Error preparing statement: " << sqlite3_errmsg(db) << std::endl;
+		return;
 	}
-	userFile.close();
+
+	sqlite3_bind_text(stmt, 1, username.c_str(), -1, SQLITE_STATIC);
+	sqlite3_bind_text(stmt, 2, password.c_str(), -1, SQLITE_STATIC);
+	sqlite3_bind_text(stmt, 3, accountType.c_str(), -1, SQLITE_STATIC);
+	sqlite3_bind_text(stmt, 4, borrowedCar.c_str(), -1, SQLITE_STATIC);
+
+	if (sqlite3_step(stmt) != SQLITE_DONE) {
+		cerr << "Error inserting user: " << sqlite3_errmsg(db) << std::endl;
+	}
+
+	sqlite3_finalize(stmt);
 }
 
-void addUser(const string& username, const string& password, const string& accountType, const string& borrowedCar = "") {
-	users.push_back({ username, password, accountType, borrowedCar });
-	saveUsers();
+void listUsers(sqlite3* db) {
+	const char* selectQuery = "SELECT * FROM users;";
+	sqlite3_stmt* stmt;
+
+	if (sqlite3_prepare_v2(db, selectQuery, -1, &stmt, 0) != SQLITE_OK) {
+		cerr << "Error preparing statement: " << sqlite3_errmsg(db) << std::endl;
+		return;
+	}
+
+	cout << "\nUzytkownicy w bazie danych: \n";
+	cout << "ID | Username | AccountType | BorrowedCar\n";
+	while (sqlite3_step(stmt) == SQLITE_ROW) {
+		int id = sqlite3_column_int(stmt, 0);
+		const char* username = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+		const char* accountType = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
+		const char* borrowedCar = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
+
+		cout << id << " | " << username << " | " << accountType << " | " << (borrowedCar ? borrowedCar : "None") << "\n";
+	}
+
+	sqlite3_finalize(stmt);
 }
 
-bool userExists(const string& username) {
-	for (const auto& user : users) {
-		if (user.username == username) {
-			return true;
-		}
-	}
-	return false;
-}
-
-bool authenticateUser(const string& username, const string& password) {
-	for (const auto& user : users) {
-		if (user.username == username && user.password == password) {
-			return true;
-		}
-	}
-	return false;
-}
-
-void listUsers() {
-	cout << "\nUzytkownicy w pliku: \n";
-	cout << "Username | AccountType | BorrowedCar\n";
-	for (const auto& user : users) {
-		cout << user.username << " | " << user.accountType << " | " << (user.borrowedCar.empty() ? "None" : user.borrowedCar) << "\n";
-	}
+void closeDatabase(sqlite3* db) {
+	sqlite3_close(db);
 }
 
 void clearScreen() {
@@ -399,9 +417,9 @@ public:
 	}
 };
 
-
 void adminMenu() {
 	int adminChoice = 0;
+	CarManagementClass carManagementObject;
 	while (true) {
 		showAdminMenu();
 		cin >> adminChoice;
@@ -419,7 +437,7 @@ void adminMenu() {
 		case 1:
 			cout << "Zarzadzanie uzytkownikami\n";
 			addToReport("-> Zarzadzanie uzytkownikami");
-			listUsers();
+			listUsers(db);
 			system("pause");
 			break;
 		case 2:
@@ -427,7 +445,7 @@ void adminMenu() {
 			getReport();
 			break;
 		case 3:
-			cout << "Zarzadzanie samochodami (tutaj dodaj swoja logikę)\n";
+			carManagementObject.carManagement();
 			break;
 		case 4:
 			cout << "Wylogowano z konta admina\n";
@@ -450,7 +468,7 @@ void logowanie() {
 		cout << "Podaj haslo: ";
 		cin >> haslo;
 
-		if (authenticateUser(login, haslo)) {
+		if (login == "admin" && haslo == "admin") {
 			addUserActionToReport(login, "Zalogował się");
 			adminMenu();
 			return;
@@ -465,7 +483,7 @@ void logowanie() {
 			cout << "Wybierz opcje: ";
 			cin >> choice;
 
-			if (cin.fail() || (choice != 1 && choice != 2)) {
+			if (cin.fail() || (choice != 1 && choice != 2)) { // Kontrola błędu przy niepoprawym wyborze
 				cin.clear();
 				cin.ignore(numeric_limits<streamsize>::max(), '\n');
 				cout << "Nieprawidlowy wybor, sprobuj ponownie\n";
@@ -487,18 +505,16 @@ void rejestracja() {
 	cout << "=== Rejestracja ===\n";
 	cout << "Podaj nowy login: ";
 	cin >> nowyLogin;
-
-	if (userExists(nowyLogin)) {
-		cout << "Uzytkownik o takim loginie juz istnieje.\n";
-		system("pause");
-		return;
-	}
-
 	cout << "Podaj nowe haslo: ";
 	cin >> noweHaslo;
 
-	addUser(nowyLogin, noweHaslo, "user");
-	cout << "Utworzono nowego uzytkownika pomyslnie\n";
+	if (nowyLogin != "admin" && noweHaslo != "admin") {
+		addUser(db, nowyLogin, noweHaslo, "user");
+		cout << "Utworzono nowego uzytkownika pomyslnie\n";
+	}
+	else {
+		cout << "Nie mozna utworzyc kolejnego konta administratora\n";
+	}
 
 	int wybor;
 
@@ -507,7 +523,7 @@ void rejestracja() {
 		cout << "Wybierz opcje: ";
 		cin >> wybor;
 
-		if (cin.fail() || wybor != 1) {
+		if (cin.fail() || wybor != 1) { // Kontrola błędu przy niepoprawym wyborze
 			cin.clear();
 			cin.ignore(numeric_limits<streamsize>::max(), '\n');
 			clearScreen();
@@ -521,14 +537,14 @@ void rejestracja() {
 }
 
 int main() {
-	loadUsers();
+	initializeDatabase(db);
 
 	int mainMenuChoice = 0;
 	while (true) {
 		showMainMenu();
 		cin >> mainMenuChoice;
 
-		if (cin.fail() || mainMenuChoice < 1 || mainMenuChoice > 3) {
+		if (cin.fail() || mainMenuChoice < 1 || mainMenuChoice > 3) { // Kontrola błędu przy niepoprawym wyborze
 			cin.clear();
 			cin.ignore(numeric_limits<streamsize>::max(), '\n');
 			cout << "Nieprawidlowy wybor, sprobuj ponownie\n";
@@ -546,8 +562,9 @@ int main() {
 			break;
 		case 3:
 			cout << "Wyjscie\n";
-			addToReport("Wyjście");
+			addToReport("Wyjśćie");
 			getReport();
+			closeDatabase(db);
 			return 0;
 		}
 	}
