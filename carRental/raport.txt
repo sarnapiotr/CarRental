@@ -1,0 +1,8 @@
+-> Logowanie
+ERROR: Błędny login lub hasło
+-> Logowanie
+ERROR: Błędny login lub hasło
+-> Rejestracja
+-> Logowanie
+admin Zalogował się 
+-> Zarzadzanie uzytkownikami
