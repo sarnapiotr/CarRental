@@ -198,7 +198,7 @@ void showAdminMenu() {
 	cout << "=== Menu Admina ===\n";
 	cout << "1. Zarzadzanie uzytkownikami\n";
 	cout << "2. Pobieranie raportu\n";
-	cout << "3. Zarzadzanie samochodami\n";
+	cout << "3. Zarzadzanie pojazdami\n";
 	cout << "4. Wyloguj\n";
 	cout << "Wybierz opcje: ";
 }
@@ -213,11 +213,12 @@ void showNonBorrowingUserMenu(string login) {
 
 void showCarManagementMenu() {
 	clearScreen();
-	cout << "=== Zarzadzanie samochodami ===\n";
-	cout << "1. Dodaj\n";
-	cout << "2. Usun\n";
-	cout << "3. Edytuj\n";
-	cout << "4. Powrot\n";
+	cout << "=== Zarzadzanie pojazdami ===\n";
+	cout << "1. Dodaj samochod\n";
+	cout << "1. Dodaj motocykl\n";
+	cout << "3. Usun\n";
+	cout << "4. Edytuj\n";
+	cout << "5. Powrot\n";
 	cout << "Wybierz opcje: ";
 }
 
@@ -233,15 +234,43 @@ void getReport() {
 	Report.close();
 }
 
-class Car {
+class Vehicle {
 public:
 	string brand;
 	string model;
 	string year;
 	bool status;
 
-	Car(string brand, string model, string year, bool status)
+	Vehicle(string brand, string model, string year, bool status)
 		: brand(brand), model(model), year(year), status(status) {
+	}
+
+	string toString() const {
+		return brand + " " + model + " " + year + " " + (status ? "1" : "0");
+	}
+
+	virtual void print() const = 0;
+
+	// Klasa wewnętrzna
+	class Owner {
+	public:
+		string name;
+		string address;
+
+		Owner(string name, string address)
+			: name(name), address(address) {
+		}
+
+		string toString() const {
+			return "Owner: " + name + ", Address: " + address;
+		}
+	};
+};
+
+class Car : public Vehicle {
+public:
+	Car(string brand, string model, string year, bool status)
+		: Vehicle(brand, model, year, status) {
 	}
 
 	string toString() const {
@@ -254,6 +283,33 @@ public:
 		istringstream iss(str);
 		iss >> brand >> model >> year >> status;
 		return Car(brand, model, year, status);
+	}
+
+	void print() const override {
+		cout << "To jest samochód " << brand << " " << model << " z roku " << year;
+	}
+};
+
+class Motorcycle : public Vehicle {
+public:
+	Motorcycle(string brand, string model, string year, bool status)
+		: Vehicle(brand, model, year, status) {
+	}
+
+	string toString() const {
+		return brand + " " + model + " " + year + " " + (status ? "1" : "0");
+	}
+
+	static Motorcycle fromString(const string& str) {
+		string brand, model, year;
+		bool status;
+		istringstream iss(str);
+		iss >> brand >> model >> year >> status;
+		return Motorcycle(brand, model, year, status);
+	}
+
+	void print() const override {
+		cout << "To jest motocykl " << brand << " " << model << " z roku " << year;
 	}
 };
 
@@ -282,13 +338,34 @@ private:
 		file.close();
 	}
 
+	vector<Motorcycle> readMotorcyclesFromFile() {
+		vector<Motorcycle> motorcycles;
+		ifstream file(carDatabaseFile);
+		string line;
+		while (getline(file, line))
+		{
+			motorcycles.push_back(Motorcycle::fromString(line));
+		}
+		file.close();
+		return motorcycles;
+	}
+
+	void writeMotorcyclesToFile(const vector<Motorcycle>& motorcycles) {
+		ofstream file(carDatabaseFile);
+		for (const Motorcycle& motorcycle : motorcycles)
+		{
+			file << motorcycle.toString() << endl;
+		}
+		file.close();
+	}
+
 public:
 	void carManagement() {
 		int choice = 0;
 		showCarManagementMenu();
 		cin >> choice;
 
-		if (cin.fail() || choice < 1 || choice > 4) {
+		if (cin.fail() || choice < 1 || choice > 5) {
 			cin.clear();
 			cin.ignore(numeric_limits<streamsize>::max(), '\n');
 			cout << "Nieprawidlowy wybor, sprobuj ponownie\n";
@@ -299,20 +376,23 @@ public:
 
 		switch (choice) {
 		case 1:
-			this->carManagementAdd();
+			this->carManagementAddCar();
 			break;
 		case 2:
-			this->carManagementDelete();
+			this->carManagementAddMotorcycle();
 			break;
 		case 3:
-			this->carManagementEdit();
+			this->carManagementDelete();
 			break;
 		case 4:
+			this->carManagementEdit();
+			break;
+		case 5:
 			return;
 		}
 	}
 
-	void carManagementAdd() {
+	void carManagementAddCar() {
 		clearScreen();
 		string brand, model, year;
 		addToReport("-> Dodawanie samochodu");
@@ -350,6 +430,51 @@ public:
 			}
 			else {
 				addToReport("Dodawanie samochodu anulowane");
+				cout << "Dodawanie anulowane\n";
+			}
+			break;
+		}
+		system("pause");
+	}
+
+	void carManagementAddMotorcycle() {
+		clearScreen();
+		string brand, model, year;
+		addToReport("-> Dodawanie motocykla");
+		cout << "=== Dodaj motocykl ===\n";
+		cout << "Podaj marke:\n";
+		cin >> brand;
+		cout << "Podaj model:\n";
+		cin >> model;
+		cout << "Podaj rok:\n";
+		cin >> year;
+
+		int choice = 0;
+		cout << "Czy chcesz dodac motocykl: " << brand << " " << model << " " << year << "?\n";
+		cout << "1. Dodaj\n";
+		cout << "2. Anuluj\n";
+
+		while (true) {
+			cin >> choice;
+
+			if (cin.fail() || choice < 1 || choice > 2) {
+				cin.clear();
+				cin.ignore(numeric_limits<streamsize>::max(), '\n');
+				cout << "Nieprawidlowy wybor, sprobuj ponownie\n";
+				addToReport("ERROR: Błąd wyboru");
+				system("pause");
+				continue;
+			}
+
+			if (choice == 1) {
+				vector<Motorcycle> motorcycle = readMotorcyclesFromFile();
+				motorcycle.push_back(Motorcycle(brand, model, year, false));
+				writeMotorcyclesToFile(motorcycle);
+				addToReport("Dodawanie motocykla: " + brand + " " + model + " " + year);
+				cout << "Motocykl zostal dodany\n";
+			}
+			else {
+				addToReport("Dodawanie motocykla anulowane");
 				cout << "Dodawanie anulowane\n";
 			}
 			break;
