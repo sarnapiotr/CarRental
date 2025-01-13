@@ -1,4 +1,0 @@
--> Rejestracja
--> Logowanie
-admin Zalogował się 
--> Zarzadzanie uzytkownikami

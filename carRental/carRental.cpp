@@ -4,6 +4,7 @@
 #include <vector>
 #include <sstream>
 #include <stdio.h>
+#include <cstdlib>
 #include <sqlite3.h>
 
 using namespace std;
@@ -12,11 +13,7 @@ ofstream Report("raport.txt");
 sqlite3* db;
 
 void initializeDatabase(sqlite3*& db) {
-	int result = sqlite3_open("carrental.db", &db);
-	if (result != SQLITE_OK) {
-		cerr << "Error opening database: " << sqlite3_errmsg(db) << std::endl;
-		exit(1);
-	}
+	sqlite3_open("carrental.db", &db);
 
 	const char* createTableQuery = R"(
         CREATE TABLE IF NOT EXISTS users (
@@ -28,14 +25,11 @@ void initializeDatabase(sqlite3*& db) {
         );
     )";
 
-	char* errorMessage;
-	result = sqlite3_exec(db, createTableQuery, 0, 0, &errorMessage);
-	if (result != SQLITE_OK) {
-		std::cerr << "Error creating table: " << errorMessage << std::endl;
-		sqlite3_free(errorMessage);
-	}
-	else {
-		std::cout << "Table `users` initialized successfully." << std::endl;
+	// Execute the query to create the table
+	char* errMsg;
+	if (sqlite3_exec(db, createTableQuery, 0, 0, &errMsg) != SQLITE_OK) {
+		cerr << "Error creating table: " << errMsg << endl;
+		sqlite3_free(errMsg);
 	}
 }
 
@@ -47,7 +41,7 @@ void addUser(sqlite3* db, const string& username, const string& password, const 
 
 	sqlite3_stmt* stmt;
 	if (sqlite3_prepare_v2(db, insertQuery, -1, &stmt, 0) != SQLITE_OK) {
-		cerr << "Error preparing statement: " << sqlite3_errmsg(db) << std::endl;
+		cerr << "Error preparing insert statement: " << sqlite3_errmsg(db) << endl;
 		return;
 	}
 
@@ -57,7 +51,7 @@ void addUser(sqlite3* db, const string& username, const string& password, const 
 	sqlite3_bind_text(stmt, 4, borrowedCar.c_str(), -1, SQLITE_STATIC);
 
 	if (sqlite3_step(stmt) != SQLITE_DONE) {
-		cerr << "Error inserting user: " << sqlite3_errmsg(db) << std::endl;
+		cerr << "Error executing insert statement: " << sqlite3_errmsg(db) << endl;
 	}
 
 	sqlite3_finalize(stmt);
@@ -68,7 +62,7 @@ void listUsers(sqlite3* db) {
 	sqlite3_stmt* stmt;
 
 	if (sqlite3_prepare_v2(db, selectQuery, -1, &stmt, 0) != SQLITE_OK) {
-		cerr << "Error preparing statement: " << sqlite3_errmsg(db) << std::endl;
+		cerr << "Error preparing select statement: " << sqlite3_errmsg(db) << endl;
 		return;
 	}
 
@@ -86,12 +80,108 @@ void listUsers(sqlite3* db) {
 	sqlite3_finalize(stmt);
 }
 
+string getUserPassword(sqlite3* db, const string& username) {
+	const char* selectQuery = R"(
+        SELECT password FROM users WHERE username = ?;
+    )";
+
+	sqlite3_stmt* stmt;
+	if (sqlite3_prepare_v2(db, selectQuery, -1, &stmt, 0) != SQLITE_OK) {
+		cerr << "Error preparing select statement: " << sqlite3_errmsg(db) << endl;
+		return "";
+	}
+
+	sqlite3_bind_text(stmt, 1, username.c_str(), -1, SQLITE_STATIC);
+
+	string password = "";
+	if (sqlite3_step(stmt) == SQLITE_ROW) {
+		const char* result = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+		password = string(result);
+	}
+
+	sqlite3_finalize(stmt);
+	return password;
+}
+
+string getUserBorrowedCar(sqlite3* db, const string& username) {
+	const char* selectQuery = R"(
+        SELECT borrowedCar FROM users WHERE username = ?;
+    )";
+
+	sqlite3_stmt* stmt;
+	sqlite3_prepare_v2(db, selectQuery, -1, &stmt, nullptr);
+	sqlite3_bind_text(stmt, 1, username.c_str(), -1, SQLITE_STATIC);
+
+	string borrowedCar = "";
+
+	if (sqlite3_step(stmt) == SQLITE_ROW) {
+		const char* car = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+		if (car != nullptr) {
+			borrowedCar = car;
+		}
+	}
+
+	sqlite3_finalize(stmt);
+
+	return borrowedCar;
+}
+
+bool checkIfBorrowed(sqlite3* db, const string& carID) {
+	const char* selectQuery = R"(
+        SELECT 1 FROM users WHERE borrowedCar = ? LIMIT 1;
+    )";
+
+	sqlite3_stmt* stmt;
+	sqlite3_prepare_v2(db, selectQuery, -1, &stmt, nullptr);
+	sqlite3_bind_text(stmt, 1, carID.c_str(), -1, SQLITE_STATIC);
+
+	bool isBorrowed = false;
+
+	if (sqlite3_step(stmt) == SQLITE_ROW) {
+		isBorrowed = true;
+	}
+
+	sqlite3_finalize(stmt);
+
+	return isBorrowed;
+}
+
+void changeBorrowedCar(sqlite3* db, const std::string& login, const std::string& newBorrowedCar) {
+	std::string sql = "UPDATE users SET borrowedCar = ? WHERE username = ?;";
+
+	sqlite3_stmt* stmt;
+	int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
+	if (rc != SQLITE_OK) {
+		std::cerr << "Błąd przygotowania zapytania: " << sqlite3_errmsg(db) << std::endl;
+		return; // Jeśli wystąpi błąd, zakończ funkcję
+	}
+
+	// Binding zmiennych do zapytania
+	sqlite3_bind_text(stmt, 1, newBorrowedCar.c_str(), -1, SQLITE_STATIC); // Nowy samochód
+	sqlite3_bind_text(stmt, 2, login.c_str(), -1, SQLITE_STATIC); // Login użytkownika
+
+	// Wykonanie zapytania
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_DONE) {
+		std::cerr << "Błąd wykonania zapytania: " << sqlite3_errmsg(db) << std::endl;
+		sqlite3_finalize(stmt);
+		return; // Jeśli wystąpi błąd, zakończ funkcję
+	}
+
+	// Zakończenie pracy z zapytaniem
+	sqlite3_finalize(stmt);
+}
+
 void closeDatabase(sqlite3* db) {
 	sqlite3_close(db);
 }
 
 void clearScreen() {
+#ifdef _WIN32
 	system("cls");
+#else
+	system("clear");
+#endif
 }
 
 void showMainMenu() {
@@ -110,6 +200,14 @@ void showAdminMenu() {
 	cout << "2. Pobieranie raportu\n";
 	cout << "3. Zarzadzanie samochodami\n";
 	cout << "4. Wyloguj\n";
+	cout << "Wybierz opcje: ";
+}
+
+void showNonBorrowingUserMenu(string login) {
+	clearScreen();
+	cout << "=== Witaj " + login + " ===\n";
+	cout << "1. Wypozycz samochod\n";
+	cout << "2. Wyloguj\n";
 	cout << "Wybierz opcje: ";
 }
 
@@ -415,6 +513,38 @@ public:
 			break;
 		}
 	}
+
+	void carManagementDisplay() {
+		vector<Car> cars = readCarsFromFile();
+		if (cars.empty()) {
+			cout << "Brak samochodow do wyswietlenia\n";
+			addToReport("Brak samochodów do wyswietlenia");
+			system("pause");
+			return;
+		}
+
+		for (size_t i = 0; i < cars.size(); ++i) {
+			if (!checkIfBorrowed(db, to_string(i))) {
+				cout << i << ". Marka: " << cars[i].brand << ", Model: " << cars[i].model << ", Rok: " << cars[i].year << "\n";
+			}
+		}
+	}
+
+	void carManagementSingleDisplay(int ID) {
+		vector<Car> cars = readCarsFromFile();
+		if (cars.empty()) {
+			cout << "Brak samochodow do wyswietlenia\n";
+			addToReport("Brak samochodów do wyswietlenia");
+			system("pause");
+			return;
+		}
+
+		for (size_t i = 0; i < cars.size(); ++i) {
+			if (ID == i) {
+				cout << cars[i].brand << " " << cars[i].model << " " << cars[i].year << "\n";
+			}
+		}
+	}
 };
 
 void adminMenu() {
@@ -456,6 +586,86 @@ void adminMenu() {
 	}
 }
 
+void userMenu(string login) {
+	int userChoice = 0;
+	int borrowChoice = 0;
+	while (true) {
+		CarManagementClass carManagementObject;
+
+		if (getUserBorrowedCar(db, login) == "") {
+			showNonBorrowingUserMenu(login);
+
+			cin >> userChoice;
+
+			if (cin.fail() || userChoice < 1 || userChoice > 2) {
+				cin.clear();
+				cin.ignore(numeric_limits<streamsize>::max(), '\n');
+				cout << "Nieprawidlowy wybor, sprobuj ponownie\n";
+				addToReport("ERROR: Błąd wyboru");
+				system("pause");
+				continue;
+			}
+
+			switch (userChoice) {
+			case 1:
+				clearScreen();
+				cout << "Wybierz ID pojazdu do wypozyczenia: " << endl;
+				carManagementObject.carManagementDisplay();
+
+				cout << "Podaj ID pojazdu, ktory chcesz wypozyczyc: ";
+				cin >> borrowChoice;
+
+				cout << "Wypozyczono: ";
+				carManagementObject.carManagementSingleDisplay(borrowChoice);
+
+				changeBorrowedCar(db, login, to_string(borrowChoice));
+
+				system("pause");
+				break;
+			case 2:
+				cout << "Wylogowano z konta " + login + "\n";
+				system("pause");
+				return;
+			}
+
+		}
+		else {
+			clearScreen();
+			cout << "=== Witaj " + login + " ===\n";
+			cout << "Wypozyczasz ";
+			carManagementObject.carManagementSingleDisplay(stoi(getUserBorrowedCar(db, login)));
+			cout << endl;
+			cout << "1. Zwroc pojazd\n";
+			cout << "2. Wyloguj\n";
+			cout << "Wybierz opcje: ";
+
+			cin >> userChoice;
+
+			if (cin.fail() || userChoice < 1 || userChoice > 2) {
+				cin.clear();
+				cin.ignore(numeric_limits<streamsize>::max(), '\n');
+				cout << "Nieprawidlowy wybor, sprobuj ponownie\n";
+				addToReport("ERROR: Błąd wyboru");
+				system("pause");
+				continue;
+			}
+
+			switch (userChoice) {
+			case 1:
+				changeBorrowedCar(db, login, "");
+
+				cout << "Zwrocono pojazd\n";
+				system("pause");
+				break;
+			case 2:
+				cout << "Wylogowano z konta " + login + "\n";
+				system("pause");
+				return;
+			}
+		}
+	}
+}
+
 void logowanie() {
 	string login, haslo;
 
@@ -473,6 +683,11 @@ void logowanie() {
 			adminMenu();
 			return;
 		}
+		if (haslo == getUserPassword(db, login)) {
+			userMenu(login);
+			return;
+		}
+
 		else {
 			int choice;
 			clearScreen();
